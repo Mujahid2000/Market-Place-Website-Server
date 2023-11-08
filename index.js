@@ -31,13 +31,13 @@ const client = new MongoClient(uri, {
 });
 
 // our jwt middleware
-const verify = async(req, res, next) =>{
+const verify = async (req, res, next) => {
   const token = req.cookies?.token;
-  if(!token){
-    res.status(401).send({status: "unAuthorized Access", code: "401" })
+  if (!token) {
+    res.status(401).send({ status: "unAuthorized Access", code: "401" })
   }
   next();
-} 
+}
 
 async function run() {
   try {
@@ -50,128 +50,154 @@ async function run() {
 
 
     // post method for jwt
-    app.post('/jwt', async (req, res) =>{
+    app.post('/jwt', async (req, res) => {
       const user = req.body;
-      const token = jwt.sign(user, process.env.SECRET , {expiresIn: "1h"});
+      const token = jwt.sign(user, process.env.SECRET, { expiresIn: "1h" });
       const expirationTime = new Date();
       expirationTime.setHours(expirationTime.getHours() + 1);
       res
         .cookie("token", token, {
-        httpOnly: true,
-        secure: false,
-        expires: expirationTime,
-      })
-      .send({success: true});
-      
-    })
+          httpOnly: true,
+          secure: false,
+          expires: expirationTime,
+        })
+        .send({ success: true });
 
+    })
 
     // posted jobs post
 
-
-
-    app.post("/addJobs", async(req, res) =>{
-        try{
-            const body = req.body;
-            const result = await jobCollection.insertOne(body);
-            console.log(body);
-            res.send(result)
-        }   catch(error){
-            console.log(error);
-        }
+    app.post("/addJobs", async (req, res) => {
+      try {
+        const body = req.body;
+        const result = await jobCollection.insertOne(body);
+        console.log(body);
+        res.send(result)
+      } catch (error) {
+        console.log(error);
+      }
     })
     // posted jobs get
-    app.get('/addJobs',  async (req, res) => {
-      try{
+    app.get('/addJobs', async (req, res) => {
+      try {
         const query = {};
-        if(req.query.buyerEmail){
+        if (req.query.buyerEmail) {
           query.buyerEmail = req.query.buyerEmail;
         }
         const result = await jobCollection.find(query).toArray();
-        res.send(result)
-    }   catch(error){
+        return res.status(200).send(result)
+      } catch (error) {
         console.log(error);
-        res.status(500).send('internal server error')
-    }
-})
+        return res.status(500).send('internal server error')
+      }
+    })
 
-app.delete('/addJobs/:id', async (req, res) => {
-  try{
-    const id = req.params.id;
-  const query= {_id: new ObjectId(id)}
-  const result = await jobCollection.deleteOne(query)
-  res.send(result);
-  }catch(err){
-    console.log(err);
-  }
-  
-  });
+    app.delete('/addJobs/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) }
+        const result = await jobCollection.deleteOne(query)
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+      }
+
+    });
 
     // bit jobs
-    app.post('/bitJobs', async(req, res) =>{
-      try{
-          const body = req.body;
-          const result = await bitCollection.insertOne(body)
-          console.log(body);
-          res.send(body)
-      }catch(error){
+    app.post('/bitJobs', async (req, res) => {
+      try {
+        const body = req.body;
+        const result = await bitCollection.insertOne(body)
+        console.log(body);
+        res.send(body)
+      } catch (error) {
+        console.log(error);
+      }
+    })
+    // bit jobs update
+    app.patch('/bitJobs/:id', async (req, res) => {
+      try {
+        const body = req.body;
+        const result = await bitCollection.updateOne({ _id: new ObjectId(req.params.id) }, { $set: { status: body.status } })
+
+        res.send(result)
+      } catch (error) {
         console.log(error);
       }
     })
     // bit jobs get
-    app.get('/bitJobs', async(req, res) =>{
-      try{
+    app.get('/bitJobs', async (req, res) => {
+      try {
         const query = {};
-        if(req.query.employerEmail){
+        const sort = req.query.sort;
+        if (req.query.employerEmail) {
           query.employerEmail = req.query.employerEmail;
         }
-        const result = await bitCollection.find(query).toArray();
-        res.send(result)
-    }   catch(error){
+
+        const sortOptions = {};
+
+        if (sort !== "") {
+          sortOptions.status = sort === 'asc' ? 1 : -1;  
+        }
+
+        const result = await bitCollection.find(query).sort(sortOptions).toArray();
+
+        const jobId = result.map((job) => new ObjectId(job.jobId));
+        const jobList = await jobCollection.find({ _id: { $in: jobId } }).toArray();
+
+        const finalBids = result.map((job) => {
+          const foundJob = jobList.find((j) => j._id.toString() === job.jobId.toString());
+          return { ...job, jobTitle: foundJob?.jobTitle };
+        });
+
+        res.send(finalBids);
+      } catch (error) {
         console.log(error);
-        res.status(500).send('internal server error')
-    }
-    })
-    
+        res.status(500).send('Internal server error');
+      }
+    });
+
+
 
     // get updatedata
-    app.get('/addJobs/:id', verify, async(req, res) =>{
-      try{
+    app.get('/addJobs/:id', async (req, res) => {
+      try {
         const jobsData = await jobCollection.findOne({
           _id: new ObjectId(req.params.id),
         });
         console.log(jobsData);
         res.send(jobsData);
-      }catch(error){
+      } catch (error) {
         console.log(error);
       }
     });
 
     // now updated data
-    app.put('/addJobs/:id', async(req, res) =>{
-      const id = {_id: new ObjectId(req.params.id)};
+    app.put('/addJobs/:id', async (req, res) => {
+      const id = { _id: new ObjectId(req.params.id) };
       const body = req.body;
       const updatedData = {
-        $set:{
-            ...body,
+        $set: {
+          ...body,
         },
       }
-      const option = {upsert: true};
+      const option = { upsert: true };
       const result = await jobCollection.updateOne(id, updatedData, option)
       console.log(body);
       res.send(result)
     })
 
     // get data by id
-    app.get('/addJobs/:id', verify, async(req, res) =>{
-      try{
+    app.get('/addJobs/:id', async (req, res) => {
+      try {
         const job = await jobCollection.findOne({
           _id: new ObjectId(req.params._id),
         });
         console.log(job);
 
         res.send(job);
-      }catch(error){
+      } catch (error) {
         console.log(error);
       }
     });
@@ -186,10 +212,10 @@ app.delete('/addJobs/:id', async (req, res) => {
 run().catch(console.dir);
 
 
-app.get('/', (req, res) =>{
-    res.send('Marketplace server is running')
+app.get('/', (req, res) => {
+  res.send('Marketplace server is running')
 })
 
-app.listen(port, () =>{
-    console.log(`Marketplace server is running on the port  ${port}`);
+app.listen(port, () => {
+  console.log(`Marketplace server is running on the port  ${port}`);
 })
