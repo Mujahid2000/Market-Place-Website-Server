@@ -81,7 +81,7 @@ async function run() {
         }
     })
     // posted jobs get
-    app.get('/addJobs', verify,  async (req, res) => {
+    app.get('/addJobs',  async (req, res) => {
       try{
         const query = {};
         if(req.query.buyerEmail){
