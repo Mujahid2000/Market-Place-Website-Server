@@ -2,13 +2,18 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const cookieParser = require('cookie-parser')
 require('dotenv').config()
 const app = express();
 const port = process.env.PORT || 5050;
 
 //middleware
-app.use(cors());
+app.use(cors({
+  origin: ["http://localhost:5173"],
+  credentials: true,
+}));
 app.use(express.json());
+app.use(cookieParser());
 
 
 console.log(process.env.DB_PASS);
@@ -25,6 +30,15 @@ const client = new MongoClient(uri, {
   }
 });
 
+// our jwt middleware
+const verify = async(req, res, next) =>{
+  const token = req.cookies?.token;
+  if(!token){
+    res.status(401).send({status: "unAuthorized Access", code: "401" })
+  }
+  next();
+} 
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -37,13 +51,24 @@ async function run() {
 
     // post method for jwt
     app.post('/jwt', async (req, res) =>{
-      const body = req.body;
-      // jwt.sign("payload", "secretKey", "expireInfo")
-      const token = jwt.sign(body, process.env.SECRET , {expiresIn: "1h"});
-      console.log();
-      res.send({body, token});
+      const user = req.body;
+      const token = jwt.sign(user, process.env.SECRET , {expiresIn: "1h"});
+      const expirationTime = new Date();
+      expirationTime.setHours(expirationTime.getHours() + 1);
+      res
+        .cookie("token", token, {
+        httpOnly: true,
+        secure: false,
+        expires: expirationTime,
+      })
+      .send({success: true});
+      
     })
+
+
     // posted jobs post
+
+
 
     app.post("/addJobs", async(req, res) =>{
         try{
@@ -56,7 +81,7 @@ async function run() {
         }
     })
     // posted jobs get
-    app.get('/addJobs', async (req, res) => {
+    app.get('/addJobs', verify,  async (req, res) => {
       try{
         const query = {};
         if(req.query.buyerEmail){
@@ -107,38 +132,10 @@ app.delete('/addJobs/:id', async (req, res) => {
         res.status(500).send('internal server error')
     }
     })
-    // app.get('/bitJobs', async(req, res) =>{
-    //   try{
-    //     const query = {};
-    //     if(req.query.buyerEmail){
-    //       query.buyerEmail = req.query.buyerEmail;
-    //     }
-    //     const result = await bitCollection.find(query).toArray();
-    //     res.send(result)
-    // }   catch(error){
-    //     console.log(error);
-    //     res.status(500).send('internal server error')
-    // }
-    // })
-
-    //bit req post
-    // app.post('/bidReq', async(req, res) =>{
-    //   try{
-    //     const body = req.body;
-    //     const result = await bitCollection.insertOne(body)
-    //     console.log(body);
-    //     res.send(body)
-    //   }catch(error){
-    //     console.log(error);
-    //     res.status(500).send('Request server is not Running');
-    //   }
-    // })
-
-    // //bit get 
-    // app.get('/')
+    
 
     // get updatedata
-    app.get('/addJobs/:id',async(req, res) =>{
+    app.get('/addJobs/:id', verify, async(req, res) =>{
       try{
         const jobsData = await jobCollection.findOne({
           _id: new ObjectId(req.params.id),
@@ -166,7 +163,7 @@ app.delete('/addJobs/:id', async (req, res) => {
     })
 
     // get data by id
-    app.get('/addJobs/:id', async(req, res) =>{
+    app.get('/addJobs/:id', verify, async(req, res) =>{
       try{
         const job = await jobCollection.findOne({
           _id: new ObjectId(req.params._id),
