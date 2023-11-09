@@ -12,7 +12,8 @@ app.use(cors({
   origin: [
     'https://taskla-market-place.web.app',
     'https://taskla-market-place.firebaseapp.com'
-  ]
+  ],
+  credentials: true
 }));
 app.use(express.json());
 app.use(cookieParser());
