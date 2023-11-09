@@ -8,10 +8,7 @@ const app = express();
 const port = process.env.PORT || 5050;
 
 //middleware
-app.use(cors({
-  origin: ["http://localhost:5173"],
-  credentials: true,
-}));
+app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 
@@ -31,10 +28,18 @@ const client = new MongoClient(uri, {
 });
 
 // our jwt middleware
+
+const logger = async(req, res, next) =>{
+  console.log('called:', req.host, req.originalUrl)
+  next();
+}
+
 const verify = async (req, res, next) => {
+  
   const token = req.cookies?.token;
+  console.log('value of token in the middleware', token);
   if (!token) {
-    res.status(401).send({ status: "unAuthorized Access", code: "401" })
+    return res.status(401).send({ message: "unAuthorized Access" })
   }
   next();
 }
@@ -50,7 +55,7 @@ async function run() {
 
 
     // post method for jwt
-    app.post('/jwt', async (req, res) => {
+    app.post('/jwt', logger, async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.SECRET, { expiresIn: "1h" });
       const expirationTime = new Date();
@@ -78,7 +83,7 @@ async function run() {
       }
     })
     // posted jobs get
-    app.get('/addJobs', async (req, res) => {
+    app.get('/addJobs', logger, async (req, res) => {
       try {
         const query = {};
         if (req.query.buyerEmail) {
@@ -127,7 +132,7 @@ async function run() {
       }
     })
     // bit jobs get
-    app.get('/bitJobs', async (req, res) => {
+    app.get('/bitJobs', logger, verify, async (req, res) => {
       try {
         const query = {};
         const sort = req.query.sort;
@@ -160,7 +165,7 @@ async function run() {
 
 
 
-    // get updatedata
+    // get update data
     app.get('/addJobs/:id', async (req, res) => {
       try {
         const jobsData = await jobCollection.findOne({
@@ -189,7 +194,7 @@ async function run() {
     })
 
     // get data by id
-    app.get('/addJobs/:id', async (req, res) => {
+    app.get('/addJobs/:id', logger, verify,  async (req, res) => {
       try {
         const job = await jobCollection.findOne({
           _id: new ObjectId(req.params._id),
