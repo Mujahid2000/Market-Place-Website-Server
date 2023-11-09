@@ -34,14 +34,21 @@ const logger = async(req, res, next) =>{
   next();
 }
 
-const verify = async (req, res, next) => {
-  
+const verifyToken = async(req, res, next) =>{
   const token = req.cookies?.token;
-  console.log('value of token in the middleware', token);
-  if (!token) {
-    return res.status(401).send({ message: "unAuthorized Access" })
+  console.log('value of token in middleware', token);
+  if(!token){
+      return res.status(401).send({message: 'not authorized'})
   }
-  next();
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) =>{
+      if(err){
+          console.log(err);
+          return res.status(401).send({message: 'unauthorized'})
+      }
+      console.log('value in the token', decoded)
+      req.user = decoded;
+      next()
+  })
 }
 
 async function run() {
@@ -83,7 +90,7 @@ async function run() {
       }
     })
     // posted jobs get
-    app.get('/addJobs', logger, async (req, res) => {
+    app.get('/addJobs', async (req, res) => {
       try {
         const query = {};
         if (req.query.buyerEmail) {
@@ -132,7 +139,7 @@ async function run() {
       }
     })
     // bit jobs get
-    app.get('/bitJobs', logger, verify, async (req, res) => {
+    app.get('/bitJobs', async (req, res) => {
       try {
         const query = {};
         const sort = req.query.sort;
@@ -194,7 +201,7 @@ async function run() {
     })
 
     // get data by id
-    app.get('/addJobs/:id', logger, verify,  async (req, res) => {
+    app.get('/addJobs/:id',  async (req, res) => {
       try {
         const job = await jobCollection.findOne({
           _id: new ObjectId(req.params._id),
