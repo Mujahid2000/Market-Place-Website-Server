@@ -67,7 +67,7 @@ async function run() {
 
 
     // post method for jwt
-    app.post('/jwt', logger, async (req, res) => {
+    app.post('/jwt', async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.SECRET, { expiresIn: "1h" });
       const expirationTime = new Date();
