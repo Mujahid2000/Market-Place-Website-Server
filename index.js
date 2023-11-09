@@ -8,7 +8,12 @@ const app = express();
 const port = process.env.PORT || 5050;
 
 //middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://taskla-market-place.web.app',
+    'https://taskla-market-place.firebaseapp.com'
+  ]
+}));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -40,7 +45,7 @@ const verifyToken = async(req, res, next) =>{
   if(!token){
       return res.status(401).send({message: 'not authorized'})
   }
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) =>{
+  jwt.verify(token, process.env.SECRET, (err, decoded) =>{
       if(err){
           console.log(err);
           return res.status(401).send({message: 'unauthorized'})
@@ -90,7 +95,7 @@ async function run() {
       }
     })
     // posted jobs get
-    app.get('/addJobs', async (req, res) => {
+    app.get('/addJobs', verifyToken, async (req, res) => {
       try {
         const query = {};
         if (req.query.buyerEmail) {
@@ -139,7 +144,7 @@ async function run() {
       }
     })
     // bit jobs get
-    app.get('/bitJobs', async (req, res) => {
+    app.get('/bitJobs', verifyToken, async (req, res) => {
       try {
         const query = {};
         const sort = req.query.sort;
