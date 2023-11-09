@@ -60,7 +60,7 @@ const verifyToken = async(req, res, next) =>{
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    
 
     const database = client.db('JobsDB');
     const jobCollection = database.collection('addJobs')
@@ -96,7 +96,7 @@ async function run() {
       }
     })
     // posted jobs get
-    app.get('/addJobs', verifyToken, async (req, res) => {
+    app.get('/addJobs',  async (req, res) => {
       try {
         const query = {};
         if (req.query.buyerEmail) {
@@ -145,7 +145,7 @@ async function run() {
       }
     })
     // bit jobs get
-    app.get('/bitJobs', verifyToken, async (req, res) => {
+    app.get('/bitJobs', async (req, res) => {
       try {
         const query = {};
         const sort = req.query.sort;
@@ -220,7 +220,7 @@ async function run() {
       }
     });
 
-    await client.db("admin").command({ ping: 1 });
+    
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
