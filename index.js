@@ -8,18 +8,11 @@ const app = express();
 const port = process.env.PORT || 5050;
 
 //middleware
-app.use(cors({
-  origin: [
-    'https://taskla-market-place.web.app',
-    'https://taskla-market-place.firebaseapp.com'
-  ],
-  credentials: true
-}));
+app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 
 
-console.log(process.env.DB_PASS);
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@mujahid.frqpuda.mongodb.net/?retryWrites=true&w=majority`;
 console.log(uri);
@@ -220,6 +213,7 @@ async function run() {
       }
     });
 
+    //complete the crud operation
     
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
